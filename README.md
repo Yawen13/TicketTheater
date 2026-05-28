@@ -1,14 +1,17 @@
-# TicketRouter — IT 智能报修台
+# 工单剧场 · Ticket Theater
 
-一个 AI 驱动的设备报修工单管理系统 MVP。用户提交故障描述后，后端自动调用 DeepSeek AI 进行分类推理，生成标准化工单标签（网络问题 / 硬件故障 / 软件异常 / 账号权限）。工单存入 SQLite，前端提供工单大厅和管理员面板进行状态管理与统计分析。
+IT 工单模拟经营 + 游戏化 Web 应用。扮演 IT 支持团队，处理工单赚取积分，体验故事化的工单管理。
 
 ## 功能特性
 
-- **AI 智能分类**：提交故障描述后自动推理分类标签，失败时回退到内置规则分类器
-- **工单大厅**：按时间倒序展示所有工单，支持分类色彩标识和状态跟踪
-- **管理员面板**：工单状态管理（待处理 / 处理中 / 已完成）、筛选和统计概览
-- **工业工具感 UI**：完全自定义设计系统（OKLCH 色彩、DM Mono 等宽字体、交错动画），无第三方 CSS 框架依赖
-- **轻量架构**：FastAPI + SQLite，单文件前端，零配置即可运行
+- **AI 智能工单**：DeepSeek 自动生成工单描述、分类和处理方案
+- **多人设管理员**：7 位 AI 管理员（毒舌老鸟、暖男助手、摸鱼达人、冷面机器人等），各具独特语气和风格
+- **工单生命周期**：待分配 → 处理中 → 待审核 → 已完成 → 已评价，完整流程
+- **游戏化系统**：成就徽章、排行榜、随机灾难事件（如数据库崩溃）
+- **积分商店**：道具购买、减压物品、管理员 Buff
+- **压力值机制**：管理员压力过高影响效率，需购买减压道具
+- **双模式**：用户模式（手动操作）和导演模式（AI 自动推进）
+- **征集方案**：并行调用 AI，3-4 位管理员同时出方案供选择
 
 ## 技术栈
 
@@ -16,71 +19,34 @@
 |----|------|
 | 后端 | Python FastAPI |
 | 数据库 | SQLite |
-| AI 分类 | DeepSeek API（兼容 OpenAI 接口） |
-| 前端 | 纯 HTML/CSS/JS（无框架，自定义设计系统） |
-| 字体 | DM Mono（Google Fonts）+ 系统中文字体栈 |
+| AI | DeepSeek API |
+| 前端 | 纯 HTML/CSS/JS（OKLCH 设计系统） |
 
 ## 快速开始
 
-### 1. 安装依赖
-
 ```bash
 pip install -r requirements.txt
+python -m uvicorn backend.main:app --reload
 ```
 
-### 2. 启动服务
+访问 `http://localhost:8000/`
 
-```bash
-uvicorn backend.main:app --reload
-```
-
-### 3. 打开浏览器
-
-访问 `http://127.0.0.1:8000/`
-
-> **注意**：不要直接用浏览器打开 `frontend/index.html`，必须通过 uvicorn 服务访问，否则 API 请求会失败。
-
-## DeepSeek AI 配置
-
-默认使用环境变量 `DEEPSEEK_API_KEY` 调用 DeepSeek 接口。如未配置，则自动回退到内置关键词规则分类器。
-
-```bash
-# Windows PowerShell
-$env:DEEPSEEK_API_KEY = "你的 API Key"
-
-# macOS / Linux
-export DEEPSEEK_API_KEY="你的 API Key"
-```
+> API Key 已内置在 `.env` 和代码中，开箱即用。
 
 ## 目录结构
 
 ```
-TicketRouter/
+TicketTheater/
 ├── backend/
-│   ├── main.py           # FastAPI 应用，API 路由
-│   ├── ai_classifier.py  # AI 分类 + 规则回退
-│   └── db.py             # SQLite 数据库操作
+│   ├── main.py            # FastAPI 应用，所有 API 路由
+│   ├── ai_classifier.py   # DeepSeek AI 分类 + 方案生成
+│   ├── db.py              # SQLite 数据库
+│   ├── simulator.py       # AI 工单/方案/评价模拟器
+│   ├── workflow.py        # 工单生命周期状态机 + 积分计算
+│   ├── gamification.py    # 成就/随机事件/商店/人设
+│   └── trend_monitor.py   # 趋势监控
 ├── frontend/
-│   └── index.html        # 单文件前端（自定义设计）
-├── requirements.txt      # Python 依赖
+│   └── index.html         # 单文件前端
+├── requirements.txt
 └── README.md
 ```
-
-## API 端点
-
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| `GET` | `/` | 前端页面 |
-| `POST` | `/api/tickets` | 创建工单（自动 AI 分类） |
-| `GET` | `/api/tickets` | 获取所有工单 |
-| `PATCH` | `/api/tickets/{id}/status` | 更新工单状态 |
-| `GET` | `/api/tickets/stats` | 获取分类/状态统计数据 |
-
-## 分类标签
-
-| 类别 | 色彩标识 | 典型关键词 |
-|------|----------|-----------|
-| 网络问题 | 蓝色 | 网络、无法连接、断网、Wi-Fi、ping |
-| 硬件故障 | 红铜色 | 硬件、蓝屏、主板、电源、风扇、打印机 |
-| 软件异常 | 紫色 | 软件、崩溃、卡顿、报错、无法打开 |
-| 账号权限 | 绿色 | 账号、密码、权限、登录、锁定 |
