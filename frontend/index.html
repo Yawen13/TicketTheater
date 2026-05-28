@@ -1,0 +1,1193 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>工单剧场</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet"/>
+<style>
+:root {
+    --bg:       oklch(0.975 0.003 85);
+    --surface:  oklch(0.992 0.002 85);
+    --text:     oklch(0.17 0.006 85);
+    --muted:    oklch(0.42 0.012 85);
+    --accent:   oklch(0.60 0.165 58);
+    --accent2:  oklch(0.52 0.170 50);
+    --border:   oklch(0.87 0.006 85);
+    --radius:   6px;
+    --ease:     cubic-bezier(0.17, 0.84, 0.44, 1);
+    --font:     "PingFang SC","Microsoft YaHei","Hiragino Sans GB",system-ui,sans-serif;
+    --mono:     "DM Mono","SF Mono","Cascadia Code",monospace;
+    --r-urgent: oklch(0.48 0.18 28);
+    --r-high:   oklch(0.56 0.17 45);
+    --r-medium: oklch(0.62 0.16 80);
+    --r-low:    oklch(0.50 0.13 155);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font);color:var(--text);background:var(--bg);line-height:1.6;-webkit-font-smoothing:antialiased}
+.container{max-width:1100px;margin:0 auto;padding:24px 16px}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+h1{font-size:1.5rem;font-weight:700}
+h2{font-size:1.15rem;font-weight:600}
+.btn{display:inline-flex;align-items:center;gap:6px;font-family:var(--font);font-size:.875rem;font-weight:500;padding:8px 18px;border:1.5px solid transparent;border-radius:var(--radius);cursor:pointer;transition:all .2s var(--ease);background:transparent}
+.btn-primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+.btn-primary:hover{background:var(--accent2);transform:translateY(-1px)}
+.btn-outline{color:var(--accent);border-color:var(--accent)}
+.btn-outline:hover{background:oklch(0.94 0.035 68)}
+.btn-ghost{color:var(--muted);border-color:transparent;font-size:.8rem;padding:4px 10px}
+.btn-ghost:hover{color:var(--accent)}
+.btn-sm{font-size:.75rem;padding:4px 10px}
+.btn-xs{font-size:.7rem;padding:2px 8px;border-radius:3px}
+.btn:disabled{opacity:.5;pointer-events:none}
+
+/* mode select */
+.mode-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;gap:40px;text-align:center}
+.mode-screen .logo{font-family:var(--mono);font-size:.75rem;color:var(--accent);text-transform:uppercase;letter-spacing:.12em}
+.mode-screen h1{font-size:2.2rem}
+.mode-screen .subtitle{color:var(--muted);max-width:420px}
+.mode-cards{display:grid;grid-template-columns:1fr 1fr;gap:20px;max-width:560px;width:100%}
+@media(max-width:580px){.mode-cards{grid-template-columns:1fr}}
+.mode-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:32px 24px;cursor:pointer;transition:all .25s var(--ease);text-align:center}
+.mode-card:hover{border-color:var(--accent);transform:translateY(-3px);box-shadow:0 4px 16px oklch(0 0 0/.08)}
+.mode-card .mc-icon{font-size:2.5rem;margin-bottom:12px}
+.mode-card .mc-title{font-weight:700;font-size:1.1rem;margin-bottom:6px}
+.mode-card .mc-desc{font-size:.8rem;color:var(--muted);line-height:1.5}
+
+/* app */
+#appWrap{display:none}
+.header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:24px;flex-wrap:wrap}
+.header .brand{font-family:var(--mono);font-size:.65rem;color:var(--accent);text-transform:uppercase;letter-spacing:.1em}
+.header .score-display{display:flex;align-items:center;gap:12px;font-family:var(--mono);font-size:.85rem}
+.header .score-display .score-val{font-size:1.3rem;font-weight:600;color:var(--accent)}
+.header .streak{display:inline-flex;align-items:center;gap:4px;font-size:.75rem;background:oklch(0.93 0.04 60);color:oklch(0.45 0.16 55);padding:2px 10px;border-radius:20px}
+
+/* event banner */
+.event-banner{display:flex;align-items:center;gap:12px;background:oklch(0.92 0.06 55);border:1px solid oklch(0.78 0.14 58);border-radius:var(--radius);padding:12px 18px;margin-bottom:20px;font-size:.85rem;animation:slideDown .4s var(--ease)}
+.event-banner .eb-icon{font-size:1.4rem}
+.event-banner .eb-body{flex:1}
+.event-banner .eb-close{background:none;border:none;cursor:pointer;font-size:1.2rem;color:var(--muted)}
+@keyframes slideDown{from{opacity:0;transform:translateY(-20px)}to{opacity:1;transform:translateY(0)}}
+
+.wf-step{display:flex;flex-direction:column;align-items:center;gap:6px;min-width:70px;position:relative}
+.wf-step .wf-circle{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1rem;border:2px solid var(--border);background:var(--surface);transition:all .3s var(--ease)}
+.wf-step .wf-label{font-size:.65rem;color:var(--muted);white-space:nowrap}
+.wf-step.active .wf-circle{border-color:var(--accent);background:oklch(0.94 0.04 68);box-shadow:0 0 12px oklch(0.60 0.165 58/.25)}
+.wf-step.done .wf-circle{border-color:oklch(0.50 0.13 155);background:oklch(0.92 0.03 152)}
+.wf-connector{width:40px;height:2px;background:var(--border);flex-shrink:0}
+.wf-connector.done{background:oklch(0.50 0.13 155)}
+
+/* panels */
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:20px}
+.panel-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.ticket-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;contain:content}
+@media(max-width:700px){.ticket-grid{grid-template-columns:1fr}}
+
+/* ticket card */
+.ticket-card{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;cursor:pointer;transition:all .2s var(--ease);animation:cardIn .35s var(--ease) both;position:relative}
+.ticket-card:hover{border-color:var(--accent);transform:translateY(-1px)}
+.ticket-card.selected{border-color:var(--accent);box-shadow:0 0 0 2px oklch(0.60 0.165 58/.2)}
+.ticket-card .tc-no{font-family:var(--mono);font-size:.7rem;color:var(--muted)}
+.ticket-card .tc-creator{font-size:.75rem;color:var(--muted)}
+.ticket-card .tc-desc{font-size:.875rem;margin:6px 0;line-height:1.45;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.ticket-card .tc-meta{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:.7rem}
+@keyframes cardIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+/* badges */
+.badge{display:inline-flex;align-items:center;gap:3px;font-size:.68rem;font-weight:600;padding:1px 7px;border-radius:10px;font-family:var(--mono)}
+.badge-urgent{background:oklch(0.94 0.04 28);color:var(--r-urgent)}
+.badge-high{background:oklch(0.94 0.04 48);color:var(--r-high)}
+.badge-medium{background:oklch(0.94 0.04 80);color:oklch(0.45 0.14 78)}
+.badge-low{background:oklch(0.94 0.04 155);color:var(--r-low)}
+.badge-cat{background:oklch(0.94 0.02 250);color:oklch(0.40 0.10 248);}
+
+/* detail panel */
+.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:600px){.detail-grid{grid-template-columns:1fr}}
+.detail-item{font-size:.8rem}
+.detail-item .di-label{color:var(--muted);font-size:.7rem;text-transform:uppercase;letter-spacing:.05em}
+.detail-item .di-val{margin-top:2px;font-weight:500}
+
+/* persona card */
+.persona-card{display:flex;align-items:center;gap:12px;padding:14px 18px;background:oklch(0.95 0.02 85);border-radius:var(--radius);margin-bottom:16px;font-size:.9rem;animation:slideDown .3s var(--ease)}
+.persona-card .pc-icon{font-size:2rem}
+.persona-card .pc-name{font-weight:700}
+.persona-card .pc-phrase{color:var(--muted);font-style:italic}
+
+/* rating stars */
+.stars{display:flex;gap:4px;font-size:1.6rem;cursor:pointer}
+.stars span{transition:transform .15s var(--ease)}
+.stars span:hover{transform:scale(1.25)}
+.stars span.active{filter:grayscale(0)}
+.stars span.inactive{filter:grayscale(1);opacity:.4}
+
+/* achievements */
+.ach-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.ach-card{text-align:center;padding:14px 10px;border-radius:var(--radius);border:1px solid var(--border);font-size:.75rem;transition:all .2s}
+.ach-card.unlocked{background:oklch(0.94 0.04 68);border-color:var(--accent)}
+.ach-card.locked{opacity:.4;filter:grayscale(1)}
+.ach-card .ach-icon{font-size:1.5rem;margin-bottom:4px}
+
+/* analytics */
+.anal-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+@media(max-width:700px){.anal-grid{grid-template-columns:repeat(2,1fr)}}
+.anal-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;text-align:center}
+.anal-card .an-val{font-family:var(--mono);font-size:1.8rem;font-weight:600;color:var(--accent)}
+.anal-card .an-label{font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-top:4px}
+
+/* leaderboard */
+.lb-row{display:flex;align-items:center;gap:12px;padding:10px 14px;border-bottom:1px solid var(--border);font-size:.85rem}
+.lb-row .lb-rank{font-family:var(--mono);font-weight:700;font-size:1rem;width:36px}
+.lb-row .lb-name{flex:1}
+.lb-row .lb-pts{font-family:var(--mono);color:var(--accent);font-weight:600}
+
+/* animations */
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes popIn{0%{transform:scale(.8);opacity:0}70%{transform:scale(1.05)}100%{transform:scale(1);opacity:1}}
+@keyframes pointFly{0%{opacity:1;transform:translateY(0)}100%{opacity:0;transform:translateY(-40px)}}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 oklch(0.60 0.165 58/.4)}50%{box-shadow:0 0 0 12px oklch(0.60 0.165 58/0)}}
+.loading-dots{display:inline-flex;gap:3px}
+.loading-dots span{width:5px;height:5px;border-radius:50%;background:var(--accent);animation:dotPulse 1.2s infinite var(--ease)}
+.loading-dots span:nth-child(2){animation-delay:.2s}
+.loading-dots span:nth-child(3){animation-delay:.4s}
+@keyframes dotPulse{0%,100%{transform:scale(.6);opacity:.4}50%{transform:scale(1);opacity:1}}
+.points-popup{position:fixed;pointer-events:none;font-family:var(--mono);font-weight:700;font-size:1.2rem;color:var(--accent);animation:pointFly 1.2s var(--ease) forwards;z-index:999}
+.achievement-toast{position:fixed;top:20px;right:20px;z-index:1000;background:var(--surface);border:2px solid var(--accent);border-radius:var(--radius);padding:16px 22px;animation:popIn .5s var(--ease);display:flex;align-items:center;gap:12px;box-shadow:0 8px 24px oklch(0 0 0/.15)}
+.achievement-toast .at-icon{font-size:2rem}
+.achievement-toast .at-text{font-size:.85rem}
+.achievement-toast .at-name{font-weight:700}
+
+/* scrollbar */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+
+/* ── 灾难事件叠加层 ── */
+#catastropheOverlay{
+  display:none;position:fixed;inset:0;z-index:2000;
+  align-items:center;justify-content:center;
+}
+#catastropheOverlay.active{display:flex}
+#catastropheOverlay .cat-bg{
+  position:absolute;inset:0;
+  background:oklch(0.08 0.04 22/.88);
+  animation:catFadeIn .4s var(--ease);
+}
+@keyframes catFadeIn{from{opacity:0}to{opacity:1}}
+#catastropheOverlay .cat-card{
+  position:relative;z-index:1;
+  background:oklch(0.12 0.02 30);
+  border:2px solid oklch(0.55 0.18 28);
+  border-radius:12px;padding:32px 40px;
+  max-width:460px;text-align:center;
+  animation:catPopIn .5s var(--ease);
+  box-shadow:0 0 60px oklch(0.55 0.18 28/.5),inset 0 0 60px oklch(0.55 0.18 28/.08);
+}
+@keyframes catPopIn{0%{transform:scale(.85);opacity:0}70%{transform:scale(1.04)}100%{transform:scale(1);opacity:1}}
+#catastropheOverlay .cat-icon{font-size:3rem;margin-bottom:8px}
+#catastropheOverlay .cat-title{font-size:1.2rem;font-weight:800;color:oklch(0.85 0.08 55);margin-bottom:6px}
+#catastropheOverlay .cat-desc{font-size:.78rem;color:oklch(0.75 0.02 55);margin-bottom:16px;line-height:1.5}
+#catastropheOverlay .cat-timer{font-family:var(--mono);font-size:2.2rem;font-weight:700;color:oklch(0.65 0.17 55);margin-bottom:10px}
+#catastropheOverlay .cat-timer.urgent{color:oklch(0.55 0.18 28);animation:timerBlink .5s infinite}
+@keyframes timerBlink{0%,100%{opacity:1}50%{opacity:.3}}
+#catastropheOverlay .cat-penalty{font-size:.7rem;color:oklch(0.55 0.18 28);margin-bottom:8px}
+#catastropheOverlay .cat-btn{
+  font-family:var(--font);font-size:.8rem;font-weight:700;
+  padding:8px 28px;border:2px solid oklch(0.55 0.18 28);
+  background:transparent;color:oklch(0.75 0.08 50);
+  border-radius:var(--radius);cursor:pointer;transition:all .2s;
+}
+#catastropheOverlay .cat-btn:hover{background:oklch(0.55 0.18 28/.2);color:oklch(0.9 0.1 50)}
+@keyframes screenShake{0%,100%{transform:translate(0)}10%{transform:translate(-3px,-1px)}30%{transform:translate(2px,1px)}50%{transform:translate(-1px,2px)}70%{transform:translate(3px,-1px)}90%{transform:translate(-2px,0)}}
+body.cat-shaking{animation:screenShake .4s infinite}
+
+/* ── 头像状态条 ── */
+.avatar-bar{
+  display:flex;align-items:center;gap:14px;padding:10px 16px 28px;
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius);margin-bottom:16px;flex-wrap:wrap;
+}
+.avatar-bar .ab-label{
+  font-size:.62rem;color:var(--muted);white-space:nowrap;
+  display:flex;align-items:center;gap:5px;font-weight:600;margin-right:4px;
+}
+.avatar-item{
+  display:flex;flex-direction:column;align-items:center;gap:3px;
+  position:relative;cursor:pointer;flex-shrink:0;
+  transition:transform .25s var(--ease);
+}
+.avatar-item:hover{transform:translateY(-2px);z-index:5}
+.avatar-item .av-ring{
+  width:38px;height:38px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:1.15rem;position:relative;
+  background:oklch(0.96 0.005 80);
+  border:2px solid var(--border);
+  transition:all .35s var(--ease);
+}
+/* 状态角标 */
+.avatar-item .av-dot{
+  position:absolute;bottom:0;right:0;width:8px;height:8px;
+  border-radius:50%;border:1.5px solid var(--surface);
+  transition:all .35s var(--ease);z-index:2;
+}
+.avatar-item .av-name{font-size:.55rem;color:var(--muted);white-space:nowrap;text-align:center;max-width:48px;overflow:hidden;text-overflow:ellipsis}
+.avatar-item .av-stress{width:100%;height:2px;background:var(--border);border-radius:1px;overflow:hidden}
+.avatar-item .av-stress-fill{height:100%;border-radius:1px;transition:width .5s var(--ease)}
+.avatar-item .av-tip{
+  display:none;position:absolute;top:calc(100% + 6px);left:50%;transform:translateX(-50%);
+  background:var(--text);color:var(--bg);font-size:.55rem;
+  padding:3px 9px;border-radius:4px;white-space:nowrap;pointer-events:none;z-index:10;
+}
+.avatar-item:hover .av-tip{display:block}
+/* 状态色 */
+.avatar-item.idle .av-dot{background:oklch(0.52 0.13 152)}
+.avatar-item.idle .av-ring{border-color:oklch(0.60 0.08 150)}
+.avatar-item.idle .av-stress-fill{background:oklch(0.52 0.12 152)}
+.avatar-item.busy .av-dot{background:oklch(0.55 0.18 28);animation:dotPulse2 .8s infinite}
+.avatar-item.busy .av-ring{border-color:oklch(0.60 0.16 45);box-shadow:0 0 10px oklch(0.60 0.16 50/.35)}
+.avatar-item.busy .av-stress-fill{background:oklch(0.55 0.18 28)}
+@keyframes dotPulse2{0%,100%{opacity:1}50%{opacity:.3}}
+.avatar-item.just-done .av-dot{background:oklch(0.55 0.14 150);box-shadow:0 0 8px oklch(0.55 0.14 150/.7)}
+.avatar-item.just-done .av-ring{border-color:oklch(0.55 0.12 150)}
+.avatar-item.just-done .av-stress-fill{background:oklch(0.52 0.14 152)}
+.avatar-item.stressed .av-dot{background:oklch(0.55 0.18 28);animation:dotPulse2 .4s infinite}
+.avatar-item.stressed .av-ring{border-color:oklch(0.55 0.18 28);animation:stressShake2 .25s infinite}
+.avatar-item.stressed .av-stress-fill{background:oklch(0.55 0.18 28)}
+@keyframes stressShake2{0%,100%{transform:translateX(0)}50%{transform:translateX(1.5px)}}
+.av-stress-fill.warn{background:oklch(0.62 0.16 72)}
+.av-stress-fill.danger{background:oklch(0.55 0.18 28)}
+
+/* shop panel */
+.shop-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:16px;display:none}
+.shop-panel.open{display:block}
+.shop-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media(max-width:600px){.shop-grid{grid-template-columns:1fr}}
+.shop-item{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;display:flex;flex-direction:column;gap:6px;transition:all .2s var(--ease)}
+.shop-item:hover{border-color:var(--accent)}
+.shop-item .si-name{font-weight:700;font-size:.82rem}
+.shop-item .si-desc{font-size:.7rem;color:var(--muted);line-height:1.4}
+.shop-item .si-cost{font-family:var(--mono);font-size:.75rem;color:var(--accent);font-weight:600}
+.shop-item .si-btn{font-size:.7rem;padding:4px 10px}
+.shop-item.sold{opacity:.5;pointer-events:none}
+
+/* ── 摸鱼茶水间：底部弹幕 ── */
+#chatBarWrap{position:fixed;bottom:0;left:0;right:0;z-index:900;font-family:var(--font)}
+#chatToggle{display:flex;align-items:center;gap:6px;width:100%;padding:7px 18px;background:oklch(0.22 0.01 80);color:oklch(0.82 0.01 80);border:none;font-family:var(--font);font-size:.73rem;cursor:pointer;text-align:left;letter-spacing:.04em;transition:background .2s}
+#chatToggle:hover{background:oklch(0.28 0.01 80)}
+#chatToggle .ct-dot{width:6px;height:6px;border-radius:50%;background:oklch(0.60 0.18 55);animation:lightPulse 1.5s infinite}
+#chatBar{background:oklch(0.16 0.008 80);border-top:1px solid oklch(0.28 0.008 80);max-height:195px;overflow-y:auto;padding:8px 18px;display:none}
+#chatBar.open{display:block}
+#chatMessages{display:flex;flex-direction:column;gap:3px}
+.chat-msg{display:flex;align-items:flex-start;gap:7px;font-size:.7rem;color:oklch(0.88 0.005 80);animation:chatSlideIn .35s var(--ease);line-height:1.55;padding:2px 0}
+.chat-msg .cm-emoji{flex-shrink:0;font-size:.85rem;line-height:1}
+.chat-msg .cm-name{flex-shrink:0;font-weight:700;color:var(--accent);font-size:.68rem}
+.chat-msg .cm-body{flex:1;min-width:0;word-break:break-all}
+.chat-msg.system{color:oklch(0.92 0.07 62);font-weight:600;padding:4px 8px;background:oklch(0.25 0.04 60/.25);border-radius:4px;margin:2px 0}
+.chat-msg.system .cm-body{font-weight:700}
+@keyframes chatSlideIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+body{padding-bottom:28px}
+</style>
+</head>
+<body>
+
+<!-- MODE SCREEN -->
+<div id="modeScreen" class="mode-screen">
+  <div>
+    <div class="logo">工单剧场 · Ticket Theater</div>
+    <h1>工单剧场</h1>
+    <p class="subtitle">选择你的角色，进入游戏化的工单生命周期模拟系统</p>
+  </div>
+  <div class="mode-cards">
+    <div class="mode-card" onclick="startMode('user')">
+      <div class="mc-icon">🎭</div>
+      <div class="mc-title">用户模式</div>
+      <div class="mc-desc">我是报修人<br>提交工单，观看 AI 管理员表演，给处理结果打分</div>
+    </div>
+    <div class="mode-card" onclick="startMode('director')">
+      <div class="mc-icon">🎬</div>
+      <div class="mc-title">导演模式</div>
+      <div class="mc-desc">我是管理员<br>AI 用户不断提交工单，你来分配、处理、审核赚积分</div>
+    </div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="appWrap">
+  <div class="container">
+    <div class="header">
+      <div>
+        <div class="brand">工单剧场</div>
+        <h1 id="modeTitle">工单剧场</h1>
+      </div>
+      <div class="score-display">
+        <span id="streakDisplay" class="streak" style="display:none"></span>
+        <span>积分</span>
+        <span class="score-val" id="scoreDisplay">0</span>
+        <button class="btn btn-ghost" onclick="switchTab('workbench')">工作台</button>
+        <button class="btn btn-ghost" onclick="switchTab('analytics')">数据</button>
+        <button class="btn btn-ghost" onclick="switchTab('achievements-tab')">成就</button>
+        <button class="btn btn-ghost" onclick="backToMode()">退出</button>
+      </div>
+    </div>
+
+    <!-- Event banner -->
+    <div id="eventBanner" class="event-banner" style="display:none">
+      <span class="eb-icon"></span>
+      <span class="eb-body"></span>
+      <button class="eb-close" onclick="dismissEvent()">&times;</button>
+    </div>
+
+    <!-- TABS -->
+    <div id="tabWorkbench">
+      <!-- 吃瓜大屏：格子间 -->
+      <div class="avatar-bar" id="avatarBar"></div>
+
+      <!-- Selected ticket detail -->
+      <div id="ticketDetail" class="panel" style="display:none"></div>
+
+      <!-- User mode: submit form -->
+      <div class="panel" id="submitPanel" style="display:none">
+        <div class="panel-header"><h2>📝 提交工单</h2></div>
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <input id="creatorInput" placeholder="你的姓名" style="padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius);font-family:var(--font);font-size:.875rem"/>
+          <select id="deptInput" style="padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius);font-family:var(--font);font-size:.875rem">
+            <option value="技术部">技术部</option><option value="市场部">市场部</option><option value="财务部">财务部</option><option value="人事部">人事部</option><option value="运营部">运营部</option><option value="销售部">销售部</option><option value="设计部">设计部</option><option value="行政部">行政部</option>
+          </select>
+          <textarea id="descInput" rows="3" placeholder="请描述你的故障或需求..." style="padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius);font-family:var(--font);font-size:.875rem;resize:vertical"></textarea>
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <span id="submitHint" style="font-size:.75rem;color:var(--muted)">AI 将自动分类并分配管理员处理</span>
+            <button class="btn btn-primary" id="submitBtn" onclick="submitTicket()">提交并智能分拣</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Director mode: refresh system -->
+      <div class="panel" id="directorPanel" style="display:none">
+        <div class="panel-header">
+          <h2>🎬 导演模式</h2>
+          <div style="display:flex;align-items:center;gap:10px">
+            <span style="font-size:.75rem;color:var(--muted)" id="spawnTimer"></span>
+            <button class="btn btn-primary btn-sm" onclick="doRefresh()" id="refreshBtn">🔄 刷新派单</button>
+          </div>
+        </div>
+        <p style="font-size:.8rem;color:var(--muted);margin-bottom:12px">AI 用户会定时提交工单，你也可以手动刷新派单（1-2单）。快速分配和处理以赚取积分！</p>
+        <button class="btn btn-outline btn-sm" onclick="toggleShop()" style="margin-bottom:12px">🛒 积分商店</button>
+        <div class="shop-panel" id="shopPanel"></div>
+      </div>
+
+      <!-- Ticket list -->
+      <div class="panel">
+        <div class="panel-header">
+          <h2 id="ticketListTitle">工单列表</h2>
+          <div style="display:flex;gap:8px">
+            <select id="statusFilter" class="btn btn-ghost btn-sm" onchange="loadTickets()" style="font-size:.75rem">
+              <option value="all">全部状态</option>
+              <option value="待分配">待分配</option>
+              <option value="处理中">处理中</option>
+              <option value="待审核">待审核</option>
+              <option value="已完成">已完成</option>
+              <option value="已评价">已评价</option>
+            </select>
+          </div>
+        </div>
+        <div class="ticket-grid" id="ticketGrid"></div>
+        <div id="emptyState" style="display:none;text-align:center;padding:40px;color:var(--muted)">暂无工单</div>
+      </div>
+    </div>
+
+    <!-- ANALYTICS TAB -->
+    <div id="tabAnalytics" style="display:none">
+      <h2 style="margin-bottom:16px">📊 数据复盘</h2>
+      <div class="anal-grid" id="analGrid"></div>
+      <div class="panel">
+        <div class="panel-header"><h2>🏆 排行榜</h2></div>
+        <div id="leaderboard"></div>
+      </div>
+    </div>
+
+    <!-- ACHIEVEMENTS TAB -->
+    <div id="tabAchievements" style="display:none">
+      <h2 style="margin-bottom:16px">🏅 成就徽章</h2>
+      <div class="ach-grid" id="achGrid"></div>
+    </div>
+  </div>
+</div>
+
+<!-- 灾难事件叠加层 -->
+<div id="catastropheOverlay">
+  <div class="cat-bg"></div>
+  <div class="cat-card">
+    <div class="cat-icon" id="catIcon"></div>
+    <div class="cat-title" id="catTitle"></div>
+    <div class="cat-desc" id="catDesc"></div>
+    <div class="cat-timer" id="catTimer"></div>
+    <div class="cat-penalty" id="catPenalty"></div>
+    <button class="cat-btn" onclick="dismissCatastrophe()">知道了</button>
+  </div>
+</div>
+
+<!-- 摸鱼茶水间 -->
+<div id="chatBarWrap">
+  <button id="chatToggle" onclick="toggleChat()"><span class="ct-dot"></span> 💬 摸鱼茶水间 · 全员群聊</button>
+  <div id="chatBar"><div id="chatMessages"></div></div>
+</div>
+
+<script>
+const ROLES={USER:'user',DIRECTOR:'director'};
+const STATUS_EMOJI={'待分配':'📝','处理中':'🔧','待审核':'🔍','已完成':'✅','已评价':'⭐'};
+const CAT_COLORS={'网络问题':'oklch(0.52 0.14 252)','硬件故障':'oklch(0.55 0.15 35)','软件异常':'oklch(0.50 0.14 305)','账号权限':'oklch(0.53 0.13 158)','设施报修':'oklch(0.52 0.14 72)','服务申请':'oklch(0.50 0.12 192)','投诉建议':'oklch(0.48 0.14 8)','业务咨询':'oklch(0.48 0.12 268)','星际来客':'oklch(0.52 0.15 330)'};
+
+let state={mode:null,score:0,streak:0,selectedTicket:null,tickets:[],humanName:'',personaStatus:{},chatMessages:[]};
+
+// ── Mode ──
+async function startMode(mode){
+  state.mode=mode;
+  document.getElementById('modeScreen').style.display='none';
+  document.getElementById('appWrap').style.display='block';
+  document.getElementById('modeTitle').textContent=mode===ROLES.USER?'🎭 用户模式 · 工单剧场':'🎬 导演模式 · 工单剧场';
+
+  const res=await fetch('/api/mode/init',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode})});
+  const data=await res.json();
+  state.tickets=data.tickets||[];
+  state.score=data.score||0;
+  updateScore(0);
+
+  document.getElementById('submitPanel').style.display=mode===ROLES.USER?'block':'none';
+  document.getElementById('directorPanel').style.display=mode===ROLES.DIRECTOR?'block':'none';
+
+  initAvatarBar();
+  document.getElementById('chatBar').classList.add('open');
+  loadTickets();
+  checkEvent();
+  broadcastChat('system',{text:`🎭 欢迎来到工单剧场${mode===ROLES.USER?' · 用户模式':' · 导演模式'}！AI 管理员已就位。`});
+
+  if(mode===ROLES.DIRECTOR || mode===ROLES.USER) startSpawnTimer();
+  else stopSpawnTimer();
+}
+
+function backToMode(){
+  stopSpawnTimer();
+  clearTimeout(state._stressTimer);
+  document.getElementById('modeScreen').style.display='flex';
+  document.getElementById('appWrap').style.display='none';
+  document.getElementById('shopPanel')?.classList.remove('open');
+  state={mode:null,score:0,streak:0,selectedTicket:null,tickets:[],humanName:'',personaStatus:{},chatMessages:[],_stressTimer:null};
+}
+
+// ── Tickets ──
+async function loadTickets(){
+  const filter=document.getElementById('statusFilter').value;
+  const res=await fetch(`/api/tickets?status=${filter}`);
+  state.tickets=await res.json();
+  const grid=document.getElementById('ticketGrid');
+  const empty=document.getElementById('emptyState');
+  if(!state.tickets.length){grid.replaceChildren();empty.style.display='block';return}
+  empty.style.display='none';
+  const html=state.tickets.map((t,i)=>{
+    const sel=state.selectedTicket&&state.selectedTicket.id===t.id?' selected':'';
+    const riskBadge={'紧急':'badge-urgent','高':'badge-high','中':'badge-medium','低':'badge-low'}[t.risk_level]||'badge-medium';
+    return `<div class="ticket-card${sel}" style="animation-delay:${(i*.04).toFixed(2)}s" onclick="selectTicket(${t.id})">
+      <div class="tc-no">${escapeHtml(t.ticket_no)} · ${STATUS_EMOJI[t.status]||''} ${t.status}</div>
+      <div class="tc-desc">${escapeHtml(t.description)}</div>
+      <div class="tc-meta">
+        <span class="badge ${riskBadge}">${t.risk_level}</span>
+        <span class="badge badge-cat" style="color:${CAT_COLORS[t.category]||'var(--muted)'}">${t.category}</span>
+        <span class="tc-creator">${escapeHtml(t.creator)} · ${escapeHtml(t.department)}</span>
+        ${t.assignee?`<span style="font-size:.65rem">→ ${escapeHtml(t.assignee)}</span>`:''}
+        ${t.rating?`<span>⭐${t.rating}</span>`:''}
+      </div></div>`;
+  }).join('');
+  await new Promise(r=>requestAnimationFrame(r));
+  grid.innerHTML=html;
+}
+
+async function selectTicket(id){
+  const res=await fetch(`/api/tickets/${id}`);
+  state.selectedTicket=await res.json();
+  renderDetail(state.selectedTicket);
+  loadTickets();
+}
+
+function renderDetail(t){
+  const detail=document.getElementById('ticketDetail');
+  detail.style.display='block';
+  const stars='⭐'.repeat(t.rating||0)+'☆'.repeat(5-(t.rating||0));
+  detail.innerHTML=`
+    <div id="progressContainer"></div>
+    <div class="panel-header">
+      <h2>${escapeHtml(t.ticket_no)}</h2>
+      <span style="font-size:.8rem;color:var(--muted)">${STATUS_EMOJI[t.status]||''} ${t.status}</span>
+    </div>
+    <div class="detail-grid">
+      <div class="detail-item"><div class="di-label">创建人</div><div class="di-val">${escapeHtml(t.creator)} · ${escapeHtml(t.department)}</div></div>
+      <div class="detail-item"><div class="di-label">分类</div><div class="di-val" style="color:${CAT_COLORS[t.category]||'var(--text)'}">${t.category} · ${t.risk_level}</div></div>
+      <div class="detail-item"><div class="di-label">描述</div><div class="di-val">${escapeHtml(t.description)}</div></div>
+      <div class="detail-item"><div class="di-label">创建时间</div><div class="di-val mono">${t.created_at}</div></div>
+      ${t.assignee?`<div class="detail-item"><div class="di-label">处理人</div><div class="di-val">${escapeHtml(t.assignee)}</div></div>`:''}
+      ${t.resolution?`<div class="detail-item"><div class="di-label">处理方案</div><div class="di-val">${escapeHtml(t.resolution)}</div></div>`:''}
+      ${t.review_comment?`<div class="detail-item"><div class="di-label">审核意见</div><div class="di-val">${escapeHtml(t.review_comment)}</div></div>`:''}
+      ${t.rating?`<div class="detail-item"><div class="di-label">评价</div><div class="di-val">${stars} ${escapeHtml(t.feedback||'')}</div></div>`:''}
+    </div>
+    <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap" id="actionButtons"></div>
+  `;
+  renderActions(t);
+  updateProgressBar(t);
+}
+
+function renderActions(t){
+  const actions=document.getElementById('actionButtons');
+  actions.innerHTML='';
+  if(state.mode===ROLES.DIRECTOR){
+    if(t.status==='待分配'||t.status==='处理中'){
+      actions.innerHTML=`<button class="btn btn-primary btn-sm" id="gatherBtn" onclick="showGatherPanel(${t.id})">🎭 征集处理方案</button><div id="resolveOptions"></div>`;
+    }else if(t.status==='待审核'){
+      actions.innerHTML=`<button class="btn btn-primary btn-sm" onclick="doWorkflow(${t.id},'review')">🔍 审核通过</button>`;
+    }else if(t.status==='已完成'&&!t.rating){
+      actions.innerHTML=`<div style="font-size:.8rem;color:var(--muted)">⏳ 等待用户 <b>${escapeHtml(t.creator)}</b> 评价中...</div>`;
+      const delay=3000+Math.random()*5000;
+      setTimeout(()=>autoRateTicket(t.id),delay);
+    }
+  }
+  if(state.mode===ROLES.USER&&t.status==='已完成'&&!t.rating){
+    if(t.creator === state.humanName){
+      actions.innerHTML+=`<div style="width:100%;margin-top:8px">
+        <div style="font-size:.8rem;margin-bottom:4px">⭐ 评价 AI 管理员的服务</div>
+        <div class="stars" id="starRating">${[1,2,3,4,5].map(i=>`<span onclick="rateTicket(${t.id},${i})">☆</span>`).join('')}</div>
+      </div>`;
+    } else {
+      actions.innerHTML+=`<div style="font-size:.8rem;color:var(--muted)">⏳ AI 用户 <b>${escapeHtml(t.creator)}</b> 正在评价中...</div>`;
+      const delay=3000+Math.random()*5000;
+      setTimeout(()=>autoRateTicket(t.id),delay);
+    }
+  }
+}
+
+async function showGatherPanel(ticketId){
+  const btn=document.getElementById('gatherBtn');
+  const container=document.getElementById('resolveOptions');
+  const actions=['正在分析故障日志...','正在头脑风暴...','正在组织语言...','正在泡咖啡思考...','正在查阅知识库...','正在召唤解决方案...'];
+
+  btn.disabled=true;
+  btn.innerHTML='<span class="loading-dots"><span></span><span></span><span></span></span> 征集中';
+
+  // 先发起请求
+  const fetchPromise=fetch('/api/tickets/workflow',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ticket_id:ticketId,action:'resolve_options'})});
+
+  // 通用加载动效
+  container.innerHTML='<div id="gatherPanel" style="margin-top:10px;padding:14px 16px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius)"><div style="font-size:.8rem;font-weight:600;margin-bottom:10px">📋 正在召集管理员征集方案...</div><div id="gatherItems"><div style="font-size:.75rem;color:var(--muted);display:flex;align-items:center;gap:6px"><span class="loading-dots"><span></span><span></span><span></span></span> 等待响应</div></div></div>';
+  await sleep(500);
+
+  // 等待 API 返回
+  const res=await fetchPromise;
+  const data=await res.json();
+
+  if(!data.options||!data.options.length){container.innerHTML='';btn.disabled=false;btn.textContent='🎭 征集处理方案';return}
+
+  // 用实际返回的人设播放入场动效
+  const itemsEl=document.getElementById('gatherItems');
+  itemsEl.innerHTML='';
+  for(let i=0;i<data.options.length;i++){
+    await sleep(500);
+    const opt=data.options[i];
+    itemsEl.innerHTML+=`
+      <div style="display:flex;align-items:center;gap:8px;padding:6px 0;animation:fadeIn .4s var(--ease)">
+        <span style="font-size:1.1rem">${opt.emoji}</span>
+        <span style="font-size:.78rem;font-weight:600">${opt.persona}</span>
+        <span style="font-size:.7rem;color:var(--muted)">${actions[Math.floor(Math.random()*actions.length)]}</span>
+        <span style="font-size:.65rem;color:var(--accent);animation:pulse 1.2s infinite">●</span>
+      </div>`;
+  }
+  await sleep(600);
+
+  // 展示方案卡片（与动效中的人完全一致）
+  container.innerHTML='<div style="margin-top:10px;font-size:.8rem;font-weight:600;margin-bottom:6px">✅ 方案已收集，选择一个处理方案：</div>';
+  data.options.forEach((opt,i)=>{
+    container.innerHTML+=`
+      <div class="option-card" style="display:flex;align-items:flex-start;gap:8px;padding:10px 12px;margin-bottom:6px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;transition:all .15s var(--ease);animation:cardIn .3s var(--ease) both;animation-delay:${i*.1}s"
+           onmouseenter="this.style.borderColor='var(--accent)'" onmouseleave="this.style.borderColor='var(--border)'"
+           onclick="confirmResolve(${ticketId},'${escapeAttr(opt.resolution)}','${opt.persona}')">
+        <span style="font-size:1.5rem;flex-shrink:0">${opt.emoji}</span>
+        <div style="flex:1">
+          <div style="font-size:.78rem;font-weight:600">${opt.persona} <span style="font-weight:400;color:var(--muted)">· ${opt.style}</span></div>
+          <div style="font-size:.82rem;margin-top:3px;line-height:1.45">${escapeHtml(opt.resolution)}</div>
+        </div>
+      </div>`;
+  });
+  btn.disabled=false;
+  btn.textContent='🎭 征集处理方案';
+}
+
+function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
+
+async function confirmResolve(ticketId,resolution,persona){
+  const res=await fetch('/api/tickets/workflow',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ticket_id:ticketId,action:'resolve_confirm',resolution,persona})});
+  const data=await res.json();
+  if(data.points)showPointsPopup(data.points);
+  updateAvatar(persona,'busy');
+  broadcastChat('ticket_assign',{persona});
+  // 显示人设登场
+  if(persona){
+    const detail=document.getElementById('ticketDetail');
+    const pEmoji={'毒舌老鸟':'😤','暖男助手':'🫶','摸鱼达人':'🦥','冷面机器人':'🤖','戏精本精':'🎭','技术 wizard':'🧙','佛系青年':'🐼','甩锅大师':'🤷','纯情小白':'🐣','绩效卷王':'🏆'};
+    detail.insertAdjacentHTML('afterbegin',`<div class="persona-card"><span class="pc-icon">${pEmoji[persona]||'🤖'}</span><div><span class="pc-name">${pEmoji[persona]||''} ${persona} 已接单</span></div><div class="pc-phrase">方案已提交，进入审核阶段</div></div>`);
+    setTimeout(()=>document.querySelector('.persona-card')?.remove(),4000);
+  }
+  await loadTickets();
+  await selectTicket(ticketId);
+}
+
+// ── Workflow actions ──
+async function doWorkflow(id,action){
+  const res=await fetch('/api/tickets/workflow',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ticket_id:id,action})});
+  const data=await res.json();
+  if(data.points)showPointsPopup(data.points);
+  // 提取人设名
+  const wfPersona=data.assignee?data.assignee.replace(/^[^\s]+\s/,''):'';
+  if(wfPersona){updateAvatar(wfPersona,'just-done');broadcastChat('ticket_done',{persona:wfPersona});}
+  if(data.phrase){
+    const detail=document.getElementById('ticketDetail');
+    detail.insertAdjacentHTML('afterbegin',`<div class="persona-card"><span class="pc-icon">🤖</span><div><span class="pc-name">${escapeHtml(data.assignee||'')}</span></div><div class="pc-phrase">${escapeHtml(data.phrase)}</div></div>`);
+    setTimeout(()=>document.querySelector('.persona-card')?.remove(),5000);
+  }
+  await loadTickets();
+  await selectTicket(id);
+}
+
+async function autoRateTicket(id){
+  const res=await fetch('/api/tickets/auto-rate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ticket_id:id})});
+  const data=await res.json();
+  if(data.points)showPointsPopup(data.points);
+  broadcastChat('ticket_rated',{creator:data.creator,rating:data.rating,feedback:data.feedback});
+  // 展示评价结果
+  const detail=document.getElementById('ticketDetail');
+  const stars='⭐'.repeat(data.rating)+'☆'.repeat(5-data.rating);
+  detail.insertAdjacentHTML('afterbegin',`<div class="persona-card"><span>👤</span><div><span class="pc-name">${escapeHtml(data.creator)} 评价了工单</span></div><div>${stars} "${escapeHtml(data.feedback)}"</div><div style="font-size:.7rem;color:var(--muted)">${data.points_reason}</div></div>`);
+  setTimeout(()=>document.querySelector('.persona-card')?.remove(),6000);
+  if(data.points)showPointsPopup(data.points);
+  await loadTickets();
+  await selectTicket(id);
+}
+
+async function rateTicket(id,rating){
+  const res=await fetch('/api/tickets/rate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ticket_id:id,rating,feedback:''})});
+  const data=await res.json();
+  // 评分不扣用户分，只反馈 AI 管理员的积分
+  if(data.points>0)showPointsPopup(data.points);
+  broadcastChat('ticket_rated',{creator:state.humanName,rating});
+  await loadTickets();
+  await selectTicket(id);
+}
+
+// ── Submit ticket (user mode) ──
+async function submitTicket(){
+  const desc=document.getElementById('descInput').value.trim();
+  const creator=document.getElementById('creatorInput').value.trim()||'匿名用户';
+  state.humanName = creator;
+  const dept=document.getElementById('deptInput').value;
+  const hint=document.getElementById('submitHint');
+  if(!desc||desc.length<4){hint.textContent='描述太短了';return}
+
+  const btn=document.getElementById('submitBtn');
+  btn.disabled=true;btn.textContent='提交中...';
+
+  const res=await fetch('/api/tickets',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({description:desc,creator,department:dept})});
+  const data=await res.json();
+  document.getElementById('descInput').value='';
+  hint.textContent=data.humor_note?`✨ ${data.humor_note}`:'提交成功！AI 管理员已开始处理';
+  btn.disabled=false;btn.textContent='提交并智能分拣';
+  broadcastChat('ticket_new',{ticket:data.ticket});
+
+  // Show AI response card (don't hide — replaced by detail later)
+  if(data.ai_response){
+    const detail=document.getElementById('ticketDetail');
+    detail.style.display='block';
+    detail.innerHTML=`
+      <div id="progressContainer"></div>
+      <div class="persona-card" id="personaCard"><span class="pc-icon">${data.ai_response.persona_emoji}</span><div><span class="pc-name">${escapeHtml(data.ai_response.assignee)} 已接单</span></div><div class="pc-phrase">${escapeHtml(data.ai_response.phrase)}</div></div>
+      <p style="font-size:.8rem;color:var(--muted);text-align:center">AI 管理员正在处理你的工单...</p>`;
+  }
+
+  await loadTickets();
+  // 用户模式：启动自主进度动画 + 调用 auto-complete
+  if(data.ticket){
+    startProgressAnimation(data.ticket);
+    fetch('/api/tickets/auto-complete/'+data.ticket.id,{method:'POST'}).then(async(acRes)=>{
+      const acData=await acRes.json();
+      if(acData.persona){updateAvatar(acData.persona,'just-done');broadcastChat('ticket_done',{persona:acData.persona});}
+      await loadTickets();
+      showRatingPrompt(data.ticket.id);
+    }).catch(()=>{});
+  }
+  checkEvent();
+}
+
+function startProgressAnimation(ticket){
+  const steps=['待分配','处理中','处理中','待审核','已完成','已评价'];
+  const labels=['提交','接单','处理','审核','完成','评价'];
+  const icons=['📝','🎯','🔧','🔍','✅','⭐'];
+  let currentStep=0;
+  const totalSteps=5; // animate to 已完成
+
+  function renderStep(step){
+    const container=document.getElementById('progressContainer');
+    if(!container)return;
+    container.innerHTML=`
+      <div style="display:flex;align-items:center;gap:0;padding:10px 0;margin-bottom:12px;overflow-x:auto">
+        ${labels.map((l,i)=>{
+          let cls='',icon=icons[i];
+          if(i<step){cls='done';icon='✓';}
+          else if(i===step){cls='active';}
+          return `<div class="wf-step ${cls}"><div class="wf-circle ${cls}" style="${cls==='active'?'animation:pulse 1.5s infinite':''}">${icon}</div><div class="wf-label">${l}</div></div>${i<5?`<div class="wf-connector ${i<step?'done':''}"></div>`:''}`;
+        }).join('')}
+      </div>
+      <div style="font-size:.75rem;color:var(--muted);text-align:center">
+        ${step===0?'等待管理员接单...':step===1?'管理员已接单，开始处理...':step===2?'正在诊断问题...':step===3?'处理方案审核中...':step===4?'🎉 处理完成！':''}
+      </div>`;
+  }
+
+  renderStep(0);
+  function advance(){
+    currentStep++;
+    if(currentStep>totalSteps)return;
+    renderStep(currentStep);
+    if(currentStep<totalSteps){
+      // 随机延迟 400-800ms 模拟真实处理节奏
+      setTimeout(advance, 400+Math.random()*400);
+    }
+  }
+  // 接单（step 1）1s 后
+  setTimeout(advance, 800);
+}
+
+function showRatingPrompt(ticketId){
+  selectTicket(ticketId);
+}
+
+function updateProgressBar(t){
+  const container=document.getElementById('progressContainer');
+  if(!container)return;
+  const steps=['待分配','处理中','处理中','待审核','已完成','已评价'];
+  const labels=['提交','接单','处理','审核','完成','评价'];
+  const icons=['📝','🎯','🔧','🔍','✅','⭐'];
+  const idx=steps.indexOf(t.status);
+  if(idx<0)return;
+  container.innerHTML=`
+    <div style="display:flex;align-items:center;gap:0;padding:10px 0;margin-bottom:12px;overflow-x:auto">
+      ${labels.map((l,i)=>{
+        let cls='',icon=icons[i];
+        if(i<idx||(i===idx&&t.status==='已评价')){cls='done';icon='✓';}
+        else if(i===idx){cls='active';}
+        return `<div class="wf-step ${cls}"><div class="wf-circle ${cls}" style="${cls==='active'?'animation:pulse 1.5s infinite':''}">${icon==='✓'?'✓':icon}</div><div class="wf-label">${l}</div></div>${i<5?`<div class="wf-connector ${i<idx?'done':''}"></div>`:''}`;
+      }).join('')}
+    </div>`;
+}
+
+async function doWorkflowSilent(id,action){
+  try{await fetch('/api/tickets/workflow',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ticket_id:id,action})})}catch(e){}
+}
+
+// ── 刷新系统 ──
+let spawnInterval=null;
+let spawnCountdown=0;
+
+async function doRefresh(){
+  const btn=document.getElementById('refreshBtn');
+  btn.disabled=true;btn.textContent='派单中...';
+  const res=await fetch('/api/refresh',{method:'POST'});
+  const data=await res.json();
+  btn.disabled=false;btn.textContent='🔄 刷新派单';
+  if(data.generated&&data.generated.length){
+    const popup=document.createElement('div');
+    popup.className='points-popup';
+    popup.textContent='📥 +'+data.count+' 新工单';
+    popup.style.color='oklch(0.50 0.12 192)';
+    popup.style.left=(Math.random()*200+200)+'px';
+    popup.style.top=(Math.random()*200+200)+'px';
+    document.body.appendChild(popup);
+    setTimeout(()=>popup.remove(),1300);
+    // 用户模式：AI 管理员后台自动处理模拟工单
+    if(state.mode===ROLES.USER){
+      data.generated.forEach(t=>{
+        const delay=2000+Math.random()*4000;
+        setTimeout(async()=>{
+          const acRes=await fetch('/api/tickets/auto-complete/'+t.id,{method:'POST'});
+          const acData=await acRes.json();
+          if(acData.persona){updateAvatar(acData.persona,'just-done');broadcastChat('ticket_done',{persona:acData.persona});}
+          const rr=await fetch('/api/tickets/auto-rate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ticket_id:t.id})});
+          const rd=await rr.json();
+          if(rd.points)showPointsPopup(rd.points);
+          if(rd.rating&&acData.persona)updateAvatarRating(acData.persona,rd.rating);
+          broadcastChat('ticket_rated',{creator:rd.creator,rating:rd.rating,feedback:rd.feedback});
+          await loadTickets();
+        },delay);
+      });
+    }
+  }
+  await loadTickets();
+  if(data.generated&&data.generated.length) broadcastChat('spawn',{count:data.count});
+  resetSpawnTimer();
+}
+
+function startSpawnTimer(){
+  spawnCountdown=Math.floor(Math.random()*20)+15; // 15-35 seconds
+  updateTimerDisplay();
+  spawnInterval=setInterval(()=>{
+    spawnCountdown--;
+    updateTimerDisplay();
+    if(spawnCountdown<=0){
+      doRefresh();
+      resetSpawnTimer();
+    }
+  },1000);
+}
+
+function resetSpawnTimer(){
+  clearInterval(spawnInterval);
+  spawnCountdown=Math.floor(Math.random()*20)+15;
+  updateTimerDisplay();
+  spawnInterval=setInterval(()=>{
+    spawnCountdown--;
+    updateTimerDisplay();
+    if(spawnCountdown<=0){
+      doRefresh();
+      resetSpawnTimer();
+    }
+  },1000);
+}
+
+function updateTimerDisplay(){
+  const el=document.getElementById('spawnTimer');
+  if(el)el.textContent='⏱ 下一批工单：'+spawnCountdown+'s';
+}
+
+function stopSpawnTimer(){
+  clearInterval(spawnInterval);
+}
+
+// ── Points & Effects ──
+function updateScore(delta){
+  state.score+=delta;
+  document.getElementById('scoreDisplay').textContent=state.score;
+  document.getElementById('streakDisplay').style.display=state.streak>=3?'inline-flex':'none';
+  document.getElementById('streakDisplay').textContent='🔥 '+state.streak+'连击';
+}
+
+function showPointsPopup(pts){
+  const popup=document.createElement('div');
+  popup.className='points-popup';
+  popup.textContent=(pts>0?'+':'')+pts;
+  popup.style.left=(Math.random()*200+200)+'px';
+  popup.style.top=(Math.random()*200+200)+'px';
+  document.body.appendChild(popup);
+  setTimeout(()=>popup.remove(),1300);
+  updateScore(pts);
+  if(pts>0)state.streak++;else state.streak=Math.max(0,state.streak-1);
+}
+
+// ── Event ──
+async function checkEvent(){
+  const res=await fetch('/api/random-event');
+  const data=await res.json();
+  if(data.type==='catastrophe'&&data.event){
+    showCatastrophe(data.event);
+    broadcastChat('event',{event:data.event});
+  }else if(data.event){
+    const banner=document.getElementById('eventBanner');
+    banner.style.display='flex';
+    banner.querySelector('.eb-icon').textContent=data.event.name.split(' ')[0];
+    banner.querySelector('.eb-body').textContent=data.event.name+' — '+data.event.desc;
+    broadcastChat('event',{event:data.event});
+  }
+}
+function dismissEvent(){document.getElementById('eventBanner').style.display='none';}
+
+let catTimer=null;
+function showCatastrophe(event){
+  const ov=document.getElementById('catastropheOverlay');
+  document.getElementById('catIcon').textContent=event.name.split(' ')[0]||'🚨';
+  document.getElementById('catTitle').textContent=event.name;
+  document.getElementById('catDesc').textContent=event.desc;
+  ov.classList.add('active');
+  if(event.effect==='db_crash')document.body.classList.add('cat-shaking');
+  startCatTimer(event);
+  broadcastChat('system',{text:`🚨🚨🚨 【${event.name}】${event.desc}`});
+}
+function dismissCatastrophe(){
+  clearInterval(catTimer);
+  document.getElementById('catastropheOverlay').classList.remove('active');
+  document.body.classList.remove('cat-shaking');
+}
+function startCatTimer(event){
+  clearInterval(catTimer);
+  const timerEl=document.getElementById('catTimer');
+  const penaltyEl=document.getElementById('catPenalty');
+  if(!event.expires_at)return;
+  function tick(){
+    const now=new Date();
+    const exp=new Date(event.expires_at+'Z');
+    const left=Math.max(0,Math.floor((exp-now)/1000));
+    const m=Math.floor(left/60),s=left%60;
+    timerEl.textContent=`${m}:${String(s).padStart(2,'0')}`;
+    if(left<=30)timerEl.classList.add('urgent');
+    else timerEl.classList.remove('urgent');
+    if(event.effect==='db_crash')penaltyEl.textContent='⚠️ 超时后未解决工单每条 -5 分';
+    if(left<=0){dismissCatastrophe();return;}
+    catTimer=setTimeout(tick,1000);
+  }
+  tick();
+}
+
+// ── Tabs ──
+async function switchTab(tab){
+  document.getElementById('tabWorkbench').style.display=tab==='workbench'?'block':'none';
+  document.getElementById('tabAnalytics').style.display=tab==='analytics'?'block':'none';
+  document.getElementById('tabAchievements').style.display=tab==='achievements-tab'?'block':'none';
+  if(tab==='analytics')await loadAnalytics();
+  if(tab==='achievements-tab')await loadAchievements();
+}
+
+async function loadAnalytics(){
+  const res=await fetch('/api/tickets/stats');
+  const data=await res.json();
+  document.getElementById('analGrid').innerHTML=`
+    <div class="anal-card"><div class="an-val">${data.total}</div><div class="an-label">总工单</div></div>
+    <div class="anal-card"><div class="an-val">${data.avg_rating||'-'}</div><div class="an-label">平均评分</div></div>
+    <div class="anal-card"><div class="an-val">${Object.values(data.by_status||{}).reduce((a,b)=>a+b,0)}</div><div class="an-label">流转中</div></div>
+    <div class="anal-card"><div class="an-val">${data.by_category?Object.keys(data.by_category).length:0}</div><div class="an-label">分类数</div></div>`;
+
+  const lbRes=await fetch('/api/leaderboard');
+  const lb=await lbRes.json();
+  document.getElementById('leaderboard').innerHTML=lb.length?
+    lb.map((r,i)=>`<div class="lb-row"><span class="lb-rank">${i+1}</span><span class="lb-name">${escapeHtml(r.assignee)}</span><span style="font-size:.7rem;color:var(--muted)">${r.total_tickets}单 · ⭐${r.avg_rating||'-'}</span><span class="lb-pts">${r.total_points}分</span></div>`).join('')
+    :'<p style="text-align:center;color:var(--muted);padding:20px">暂无排名数据</p>';
+}
+
+async function loadAchievements(){
+  const res=await fetch('/api/achievements');
+  const data=await res.json();
+  document.getElementById('achGrid').innerHTML=data.achievements.map(a=>
+    `<div class="ach-card ${a.unlocked?'unlocked':'locked'}"><div class="ach-icon">${a.icon}</div><div>${a.name}</div><div style="font-size:.65rem;color:var(--muted)">${a.desc}</div></div>`
+  ).join('');
+}
+
+// ── Utils ──
+function escapeHtml(t){return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+function escapeAttr(t){return String(t).replace(/'/g,"\\'").replace(/"/g,'&quot;').replace(/\n/g,' ')}
+
+// ── 吃瓜大屏 + 摸鱼茶水间 ──
+const PERSONA_LIST=[
+  {name:'毒舌老鸟',emoji:'😤',chat:{spawn:['又来新活了？生产线驴都没这么能干！','新工单？我看看谁敢接...','又来？今天是第几个了？'],assign:['这种小问题我闭着眼都能修，放着我来。','行吧，这单我接了。下不为例。','让我看看是哪个小可爱又搞崩了系统。'],done:['搞定了。下次自己先试试重启。','修完了。简单得像呼吸一样。','搞定，效率拉满。'],react:['就这？隔壁部门怎么就没这么多事。','这代码写得...算了不说了。','啧啧，又是个经典的 user error。']}},
+  {name:'暖男助手',emoji:'🫶',chat:{spawn:['有新工单啦，大家加油哦~','需要帮忙的随时叫我~'],assign:['别担心，交给我来处理！','这个问题很常见的，我帮你看看~'],done:['处理好啦！有什么不懂的随时问我哦~','问题解决！记得多喝热水~'],react:['辛苦了辛苦了，给你点赞！','没关系，慢慢来，总能解决的~']}},
+  {name:'摸鱼达人',emoji:'🦥',chat:{spawn:['新工单？已读。去厕所了，等我30分钟。','啊...有工单啊...我茶叶还没泡开呢...'],assign:['嗯...先喝口茶...这个嘛...让我想想...','（缓缓抬头）啊？什么？哦工单...行吧...'],done:['花了点时间，但搞定了。别催。','其实不修它自己也会好...但无所谓了。'],react:['这工单量...我需要再泡一杯茶压压惊。','你们加油，我精神上支持。']}},
+  {name:'冷面机器人',emoji:'🤖',chat:{spawn:['检测到新工单。开始资源分配评估。','工单队列 +1。系统负载正常。'],assign:['工单已接收。启动处理协议。','分析完成。预计处理时间：47秒。'],done:['处理完毕。故障原因已定位。效率评分：98.7%。','工单关闭。耗时2分13秒。完毕。'],react:['该工单描述模糊度：73%。建议优化输入。','根据历史数据，此类问题的复现率为 12.4%。']}},
+  {name:'戏精本精',emoji:'🎭',chat:{spawn:['天哪！！新的工单！！这简直是史诗级的挑战！！','灯光！音乐！新角色即将登场！！'],assign:['（深吸一口气）这个工单——我！接！下！了！','舞台已就位！让本主角来解决这场技术灾难！！'],done:['历经千辛万苦，bug 已被我亲手埋葬！！鼓掌！！','太感人了！！技术之光终于照耀了这台可怜的电脑！！'],react:['看他们处理工单的样子...简直像在看默剧！！','我要把这个 case 写成剧本！！就叫《拯救工单大作战》！！']}},
+  {name:'技术 wizard',emoji:'🧙',chat:{spawn:['根据水晶球显示...今天又有新的工单降临了。','感应到了。故障的以太在涌动...'],assign:['让我施展一个古老的 debug 咒语...','二进制卦象已现。这问题需要高级符文。'],done:['ipconfig /renew 咒语已施展。网络精灵被安抚。','配置文件中的恶灵已被驱魔。和谐已恢复。'],react:['这个 bug 有很强的魔法抗性...有意思。','看了下日志...这简直是黑暗魔法的杰作。']}},
+  {name:'佛系青年',emoji:'🐼',chat:{spawn:['随缘吧，工单来就来，不来也是好的。','又有新工单？顺其自然，万物有时。'],assign:['别急，让我和这个 bug 静静地对视一会儿...','放下执念，问题自然会显现它的答案。'],done:['泡了杯茶，bug 它想通了，自己消失了。善哉。','重启了一下。有时候解决不了的事，放下了就好。'],react:['你看看这个故障描述...颇有禅意。','工单如流水，何必太认真。阿弥陀佛。']}},
+  {name:'甩锅大师',emoji:'🤷',chat:{spawn:['新工单？先拉通对齐一下，这个归哪个部门管？','让我评估一下业务边界...这个 scope 不太清晰啊。'],assign:['行吧，我先接。但后续流程需要 cross-functional 对齐。','这个嘛...得看上层战略怎么定。我先顶着。'],done:['已处理。建议将此问题纳入跨部门复盘会议。','搞定了。不过根因在别的团队那边，我已经同步他们接口人了。'],react:['这不是 IT 能单独解决的问题，需要拉通各方资源。','从组织架构来看，这个需求的对口部门还需要进一步明确。']}},
+  {name:'纯情小白',emoji:'🐣',chat:{spawn:['哇！新工单！好激动！这是我入职以来第几次来着...','老师老师们！有新任务了！我该怎么准备？'],assign:['好的老师！！我马上查一下教科书！！','老师好！！这个问题我在培训手册里见过！！让我翻一翻！！'],done:['老师！根据《标准操作流程》第三章，我搞定啦！虽然花了点时间...','老师好！我用知识库里学到的三连击法修好了！书上说成功率 87.3%！'],react:['老师们都太厉害了！！我要把今天的工单都记下来学习！！','请问这个 case 可以让我写成学习笔记吗老师？']}},
+  {name:'绩效卷王',emoji:'🏆',chat:{spawn:['新工单！正好纳入我 Q2 述职 PPT 的案例库！','来得好！这个 case 刚好能支撑我运维效能提升这个维度！'],assign:['收到！我这就拉群、建文档、定节奏、追闭环！','这个工单的处理过程我会全程记录，沉淀为最佳实践！'],done:['已通过深度赋能+数据驱动完成修复！该 case 预计可提升人效 37.5%！','闭环！该工单已录入我晋升答辩材料，支撑技术影响力评分项！'],react:['我建议把所有工单的处理时长纳入 OKR 考核，倒逼效率提升！','这个月的工单量同比上涨 15%，环比持平，趋势向好！']}},
+];
+
+function initAvatarBar(){
+  const bar=document.getElementById('avatarBar');
+  bar.innerHTML=`
+    <span class="ab-label">🎬 LIVE</span>
+    ${PERSONA_LIST.map(p=>`
+      <div class="avatar-item idle" data-persona="${p.name}">
+        <div class="av-ring"><span>${p.emoji}</span><span class="av-dot"></span></div>
+        <span class="av-name">${p.name}</span>
+        <div class="av-stress"><div class="av-stress-fill" style="width:0%"></div></div>
+        <span class="av-tip">${p.name} · 0单</span>
+      </div>`).join('')}`;
+  state.personaStatus={};
+  PERSONA_LIST.forEach(p=>{state.personaStatus[p.name]={status:'idle',tickets:0,ratings:[]};});
+  pollStress();
+}
+
+function pollStress(){
+  fetch('/api/stress').then(r=>r.json()).then(data=>{
+    if(data.catastrophe_settled){
+      showPointsPopup(-data.catastrophe_settled.penalty);
+      broadcastChat('system',{text:`💀 删库事件结束！${data.catastrophe_settled.unsolved}条工单未处理，扣除 ${data.catastrophe_settled.penalty} 分`});
+      dismissCatastrophe();
+    }
+    if(!data.persona_stress)return;
+    Object.entries(data.persona_stress).forEach(([name,val])=>{
+      const el=document.querySelector(`.avatar-item[data-persona="${name}"]`);
+      if(!el)return;
+      const fill=el.querySelector('.av-stress-fill');
+      if(fill){
+        fill.style.width=val+'%';
+        fill.className='av-stress-fill'+(val>=80?' danger':val>=60?' warn':'');
+      }
+      if(val>=80){
+        el.classList.add('stressed');
+      }else{
+        el.classList.remove('stressed');
+      }
+      if(val>=80&&Math.random()<0.15&&(!state._lastStressChat||Date.now()-state._lastStressChat>15000)){
+        state._lastStressChat=Date.now();
+        const p=PERSONA_LIST.find(x=>x.name===name);
+        if(p) broadcastChat('stress',{persona:name,emoji:p.emoji,stress:val});
+      }
+    });
+  });
+  state._stressTimer=setTimeout(pollStress,5000);
+}
+
+function updateAvatar(persona,status){
+  if(!persona)return;
+  const stat=state.personaStatus[persona];
+  if(!stat)return;
+  stat.status=status;
+  if(status==='busy')stat.tickets++;
+  const el=document.querySelector(`.avatar-item[data-persona="${persona}"]`);
+  if(!el)return;
+  el.className='avatar-item '+status;
+  const avg=stat.ratings.length?Math.round(stat.ratings.reduce((a,b)=>a+b,0)/stat.ratings.length*10)/10:'-';
+  const tip=el.querySelector('.av-tip');
+  if(tip)tip.textContent=`${persona} · ${stat.tickets}单 ⭐${avg}`;
+  if(status==='just-done')setTimeout(()=>updateAvatar(persona,'idle'),3000);
+}
+
+function updateAvatarRating(persona,rating){
+  const stat=state.personaStatus[persona];
+  if(!stat||!rating)return;
+  stat.ratings.push(rating);
+  const el=document.querySelector(`.avatar-item[data-persona="${persona}"]`);
+  if(!el)return;
+  const avg=Math.round(stat.ratings.reduce((a,b)=>a+b,0)/stat.ratings.length*10)/10;
+  const tip=el.querySelector('.av-tip');
+  if(tip)tip.textContent=`${persona} · ${stat.tickets}单 ⭐${avg}`;
+}
+
+let chatOpen=true;
+function toggleChat(){
+  chatOpen=!chatOpen;
+  document.getElementById('chatBar').classList.toggle('open',chatOpen);
+  const dot=document.getElementById('chatToggle').querySelector('.ct-dot');
+  if(dot)dot.style.visibility=chatOpen?'hidden':'visible';
+}
+
+const CHAT_SYSTEM={
+  spawn:['📥 又来了 {count} 张新工单，大家注意查收！','🎪 工单风暴！{count} 张新单已到达战场！'],
+  event:{vip:'🚨 系统广播：VIP 投诉！积分 x3，限时 3 分钟！',storm:'🎪 系统广播：工单风暴！突然涌入 5 张新工单！',lucky:'🍀 系统广播：幸运时刻降临！下一单积分翻倍！',double:'🎯 系统广播：双倍挑战！接下来 3 分钟积分 x2！'},
+};
+
+function broadcastChat(type,data){
+  const msg=generateMessage(type,data);
+  if(!msg)return;
+  state.chatMessages=state.chatMessages||[];
+  state.chatMessages.push(msg);
+  if(state.chatMessages.length>25)state.chatMessages.shift();
+  renderChatMessages();
+}
+
+function generateMessage(type,data){
+  if(type==='system')return{system:true,text:data.text};
+  if(type==='spawn'){
+    const p=randomPick(PERSONA_LIST.filter(()=>Math.random()<0.45));
+    if(p&&Math.random()<0.55)return{emoji:p.emoji,name:p.name,text:randomPick(p.chat.spawn)};
+    return{system:true,text:randomPick(CHAT_SYSTEM.spawn).replace('{count}',data.count||1)};
+  }
+  if(type==='ticket_new'){
+    const ticket=data.ticket||{};
+    const desc=(ticket.description||'未知故障').slice(0,18);
+    const p=randomPick(PERSONA_LIST);
+    return{emoji:p.emoji,name:p.name,text:`「${escapeHtml(desc)}...」 —— ${randomPick(p.chat.react)}`};
+  }
+  if(type==='ticket_assign'){
+    const persona=data.persona||'';
+    const p=PERSONA_LIST.find(x=>x.name===persona)||randomPick(PERSONA_LIST);
+    return{emoji:p.emoji,name:p.name,text:randomPick(p.chat.assign)};
+  }
+  if(type==='ticket_done'){
+    const persona=data.persona||'';
+    const p=PERSONA_LIST.find(x=>x.name===persona)||randomPick(PERSONA_LIST);
+    return{emoji:p.emoji,name:p.name,text:randomPick(p.chat.done)};
+  }
+  if(type==='ticket_rated'){
+    const creator=data.creator||'匿名用户';
+    const rating=data.rating||3;
+    const feedback=data.feedback||'';
+    return{emoji:'👤',name:creator,text:`${'⭐'.repeat(rating)} ${feedback}`};
+  }
+  if(type==='event'){
+    const evt=data.event||{};
+    const text=CHAT_SYSTEM.event[evt.id]||(evt.name+' — '+evt.desc);
+    return{system:true,text:text};
+  }
+  if(type==='stress'){
+    const persona=data.persona||'';
+    const emoji=data.emoji||'';
+    const stressBarks=[
+      '压力 {s}%！！我要崩溃了！！','受不了了...{s}%的压力谁顶得住...',
+      '救命...压力{s}%...谁来救救我...','{s}%了...再这样我就辞职！！',
+    ];
+    return{emoji,name:persona,text:randomPick(stressBarks).replace('{s}',data.stress||'??')};
+  }
+  return null;
+}
+
+function renderChatMessages(){
+  const container=document.getElementById('chatMessages');
+  const msgs=state.chatMessages||[];
+  const html=msgs.map(m=>{
+    if(m.system)return `<div class="chat-msg system"><span class="cm-body">${m.text}</span></div>`;
+    return `<div class="chat-msg"><span class="cm-emoji">${m.emoji}</span><span class="cm-name">${m.name}:</span><span class="cm-body">${m.text}</span></div>`;
+  }).join('');
+  requestAnimationFrame(()=>{
+    container.innerHTML=html;
+    const bar=document.getElementById('chatBar');
+    if(bar)bar.scrollTop=bar.scrollHeight;
+  });
+}
+
+function randomPick(arr){return arr[Math.floor(Math.random()*arr.length)];}
+
+// ── 积分商店 ──
+function toggleShop(){
+  const panel=document.getElementById('shopPanel');
+  panel.classList.toggle('open');
+  if(panel.classList.contains('open'))loadShop();
+}
+
+async function loadShop(){
+  const res=await fetch('/api/shop/items');
+  const data=await res.json();
+  const panel=document.getElementById('shopPanel');
+  panel.innerHTML=`
+    <div class="panel-header"><h2>🛒 积分商店</h2><span class="mono" style="color:var(--accent)">余额：${data.score} 分</span></div>
+    <div class="shop-grid">${data.items.map(i=>`
+      <div class="shop-item">
+        <div class="si-name">${i.name}</div>
+        <div class="si-desc">${i.desc}</div>
+        <div class="si-cost">💰 ${i.cost} 分</div>
+        ${i.type==='single'||i.type==='single_reset'?`
+          <select class="shop-persona btn btn-ghost btn-xs" style="font-size:.65rem">${PERSONA_LIST.map(p=>`<option value="${p.name}">${p.emoji} ${p.name}</option>`).join('')}</select>`:''}
+        <button class="btn btn-primary btn-sm si-btn" onclick="buyItem('${i.id}','${i.type}',this)">购买</button>
+      </div>`).join('')}</div>`;
+}
+
+async function buyItem(itemId,type,btn){
+  const persona=type==='single'||type==='single_reset'?btn.parentElement.querySelector('.shop-persona').value:null;
+  btn.disabled=true;btn.textContent='购买中...';
+  const res=await fetch('/api/shop/buy',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({item_id:itemId,persona})});
+  const data=await res.json();
+  btn.disabled=false;btn.textContent='购买';
+  if(data.ok){
+    updateScore(-data.cost);
+    broadcastChat('system',{text:`🛒 ${data.msg}`});
+    pollStress();
+    loadShop();
+  }else{
+    broadcastChat('system',{text:`❌ ${data.detail||'购买失败'}`});
+  }
+}
+
+// ── Init ──
+document.getElementById('modeScreen').style.display='flex';
+</script>
+</body>
+</html>
